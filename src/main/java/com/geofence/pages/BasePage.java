@@ -41,9 +41,9 @@ public abstract class BasePage {
     }
 
     // Get text from element
-    protected void getText(WebElement e) {
+    protected String getText(WebElement e) {
         wait.until(ExpectedConditions.visibilityOf(e));
-        e.getText();
+        return e.getText();
     }
 
     // Check if element is displayed
