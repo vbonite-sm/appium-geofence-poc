@@ -2,8 +2,10 @@ package com.geofence.utils;
 
 import io.appium.java_client.ios.IOSDriver;
 import io.appium.java_client.ios.options.XCUITestOptions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -11,22 +13,29 @@ import java.util.Map;
  * Creates IOSDriver for BrowserStack cloud execution.
  */
 public class BrowserStackiOSDriver {
-
+    
+    private static final Logger logger = LoggerFactory.getLogger(BrowserStackiOSDriver.class);
     private static final String BROWSERSTACK_URL = "https://%s:%s@hub-cloud.browserstack.com/wd/hub";
+    
+    private BrowserStackiOSDriver() {
+        // Private constructor to hide implicit public one
+    }
 
     /**
      * Create driver for BrowserStack iOS
+     * @return IOSDriver instance
+     * @throws BrowserStackDriverException if driver creation fails
      */
-    public static IOSDriver createDriver() throws Exception {
+    public static IOSDriver createDriver() throws BrowserStackDriverException {
         String username = ConfigManager.getBrowserStackUsername();
         String accessKey = ConfigManager.getBrowserStackAccessKey();
 
         if (username == null || accessKey == null) {
-            throw new RuntimeException("BrowserStack credentials not found in config.properties");
+            throw new BrowserStackDriverException("BrowserStack credentials not found in config.properties");
         }
 
         String url = String.format(BROWSERSTACK_URL, username, accessKey);
-        System.out.println("Connecting to BrowserStack for iOS...");
+        logger.info("Connecting to BrowserStack for iOS...");
 
         // Build capabilities
         XCUITestOptions options = new XCUITestOptions();
@@ -52,7 +61,7 @@ public class BrowserStackiOSDriver {
         } else {
             // Use BrowserStack sample app for demo
             options.setApp("bs://sample.app");
-            System.out.println("Using BrowserStack sample iOS app");
+            logger.info("Using BrowserStack sample iOS app");
         }
 
         // Auto accept alerts (for location permissions)
@@ -61,10 +70,26 @@ public class BrowserStackiOSDriver {
         // Add BrowserStack options
         options.setCapability("bstack:options", bstackOptions);
 
-        // Create driver
-        IOSDriver driver = new IOSDriver(new URL(url), options);
-        System.out.println("Connected to BrowserStack iOS successfully!");
-
-        return driver;
+        try {
+            // Create driver using URI instead of deprecated URL constructor
+            IOSDriver driver = new IOSDriver(URI.create(url).toURL(), options);
+            logger.info("Connected to BrowserStack iOS successfully!");
+            return driver;
+        } catch (Exception e) {
+            throw new BrowserStackDriverException("Failed to create iOS driver", e);
+        }
+    }
+    
+    /**
+     * Custom exception for BrowserStack driver errors
+     */
+    public static class BrowserStackDriverException extends Exception {
+        public BrowserStackDriverException(String message) {
+            super(message);
+        }
+        
+        public BrowserStackDriverException(String message, Throwable cause) {
+            super(message, cause);
+        }
     }
 }

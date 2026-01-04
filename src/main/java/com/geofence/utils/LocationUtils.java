@@ -1,13 +1,16 @@
 package com.geofence.utils;
 
 import io.appium.java_client.android.AndroidDriver;
-import org.openqa.selenium.remote.DriverCommand;
-import org.openqa.selenium.remote.Response;
-
-import java.util.HashMap;
-import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class LocationUtils {
+    
+    private static final Logger logger = LoggerFactory.getLogger(LocationUtils.class);
+    
+    private LocationUtils() {
+        // Private constructor to hide implicit public one
+    }
 
     public static class GeoLocation {
         private final double latitude;
@@ -49,6 +52,11 @@ public class LocationUtils {
     }
 
     public static class TestLocations {
+        
+        private TestLocations() {
+            // Private constructor to hide implicit public one
+        }
+        
         // San Francisco - Geofence Center
         public static final GeoLocation GEOFENCE_CENTER =
                 new GeoLocation(37.7749, -122.4194, "Geofence Center (SF)");
@@ -76,7 +84,7 @@ public class LocationUtils {
 
     // Set device location with Appium
     public static void setLocation(AndroidDriver driver, GeoLocation location) {
-        System.out.println("Setting device location to: " + location);
+        logger.info("Setting device location to: {}", location);
 
         org.openqa.selenium.html5.Location seleniumLocation =
                 new org.openqa.selenium.html5.Location(
@@ -89,12 +97,12 @@ public class LocationUtils {
 
         sleep(1000); // Wait for location to take effect
 
-        System.out.println("Location successfully set to: " + location);
+        logger.info("Location successfully set to: {}", location);
     }
 
     // Simulate movement between two locations
     public static void simulateMovement(AndroidDriver driver, GeoLocation start, GeoLocation end, int steps, int delayMs) {
-        System.out.println("Simulating movement from " + start + " to " + end);
+        logger.info("Simulating movement from {} to {}", start, end);
 
         double latStep = (end.getLatitude() - start.getLatitude()) / steps;
         double lonStep = (end.getLongitude() - start.getLongitude()) / steps;
@@ -107,12 +115,12 @@ public class LocationUtils {
             sleep(delayMs);
         }
 
-        System.out.println("Movement simulation completed.");
+        logger.info("Movement simulation completed.");
     }
 
     // Simulate entering geofence
     public static void simulateGeofenceEntry(AndroidDriver driver) {
-        System.out.println("Simulating geofence entry...");
+        logger.info("Simulating geofence entry...");
         simulateMovement(
                 driver,
                 TestLocations.OUTSIDE_150M,
@@ -120,12 +128,12 @@ public class LocationUtils {
                 5,
                 1000
         );
-        System.out.println("Geofence entry simulation completed.");
+        logger.info("Geofence entry simulation completed.");
     }
 
     // Simulate exiting geofence
     public static void simulateGeofenceExit(AndroidDriver driver) {
-        System.out.println("Simulating geofence exit...");
+        logger.info("Simulating geofence exit...");
         simulateMovement(
                 driver,
                 TestLocations.GEOFENCE_CENTER,
@@ -133,7 +141,7 @@ public class LocationUtils {
                 5,
                 1000
         );
-        System.out.println("Geofence exit simulation completed.");
+        logger.info("Geofence exit simulation completed.");
     }
 
     // Calculate distance between two locations
@@ -158,7 +166,8 @@ public class LocationUtils {
     public static boolean isInsideGeofence(GeoLocation location, GeoLocation center, double radiusMeters) {
         double distance = calculateDistance(location, center);
         boolean inside = distance <= radiusMeters;
-        System.out.println(location + " is " + (inside ? "inside" : "outside") + " the geofence (distance: " + distance + " meters)");
+        String status = inside ? "inside" : "outside";
+        logger.info("{} is {} the geofence (distance: {} meters)", location, status, distance);
         return inside;
     }
 

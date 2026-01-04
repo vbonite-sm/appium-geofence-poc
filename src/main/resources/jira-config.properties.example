@@ -1,0 +1,33 @@
+# Jira Configuration File
+# =======================
+# Copy this file to jira-config.properties and fill in your credentials.
+# NEVER commit jira-config.properties to version control!
+#
+# Environment Variables (override properties file):
+# - JIRA_BASE_URL
+# - JIRA_EMAIL
+# - JIRA_API_TOKEN
+# - JIRA_PROJECT_KEY
+# - JIRA_ENABLED
+# - CONFLUENCE_BASE_URL
+# - CONFLUENCE_SPACE_KEY
+
+# Your Jira Cloud URL (e.g., https://your-site.atlassian.net)
+jira.base.url=https://your-site.atlassian.net/
+
+# Your Atlassian account email
+jira.email=your-email@example.com
+
+# API Token generated from https://id.atlassian.com/manage-profile/security/api-tokens
+# IMPORTANT: Never commit real API tokens to version control!
+jira.api.token=YOUR_API_TOKEN_HERE
+
+# Default project key for creating issues
+jira.project.key=YOUR_PROJECT_KEY
+
+# Confluence config
+confluence.base.url=https://your-site.atlassian.net/wiki
+confluence.space.key=YOUR_SPACE_KEY
+
+# Enable/disable Jira integration (true/false)
+jira.enabled=true

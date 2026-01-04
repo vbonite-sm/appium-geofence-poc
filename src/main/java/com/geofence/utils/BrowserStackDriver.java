@@ -2,27 +2,40 @@ package com.geofence.utils;
 
 import io.appium.java_client.android.AndroidDriver;
 import io.appium.java_client.android.options.UiAutomator2Options;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
-// Utility class to create AndroidDriver for BrowserStack
+/**
+ * Utility class to create AndroidDriver for BrowserStack.
+ */
 public class BrowserStackDriver {
-
+    
+    private static final Logger logger = LoggerFactory.getLogger(BrowserStackDriver.class);
     private static final String BROWSERSTACK_URL = "https://%s:%s@hub-cloud.browserstack.com/wd/hub";
+    
+    private BrowserStackDriver() {
+        // Private constructor to hide implicit public one
+    }
 
-    // Create and return AndroidDriver connected to BrowserStack
-    public static AndroidDriver createDriver() throws Exception {
+    /**
+     * Create and return AndroidDriver connected to BrowserStack.
+     * @return AndroidDriver instance
+     * @throws BrowserStackDriverException if driver creation fails
+     */
+    public static AndroidDriver createDriver() throws BrowserStackDriverException {
         String username = ConfigManager.getBrowserStackUsername();
         String accessKey = ConfigManager.getBrowserStackAccessKey();
 
         if (username == null || accessKey == null) {
-            throw new RuntimeException("BrowserStack credentials not found in config.properties");
+            throw new BrowserStackDriverException("BrowserStack credentials not found in config.properties");
         }
 
         String url = String.format(BROWSERSTACK_URL, username, accessKey);
-        System.out.println("Connecting to BrowserStack...");
+        logger.info("Connecting to BrowserStack...");
 
         // Build capabilities
         UiAutomator2Options options = new UiAutomator2Options();
@@ -46,16 +59,32 @@ public class BrowserStackDriver {
         if (appUrl != null && !appUrl.isEmpty() && !appUrl.contains("YOUR_APP_ID")) {
             options.setApp(appUrl);
         } else {
-            throw new RuntimeException("BrowserStack app URL not configured. Upload your APK first.");
+            throw new BrowserStackDriverException("BrowserStack app URL not configured. Upload your APK first.");
         }
 
         // Add BrowserStack options
         options.setCapability("bstack:options", bstackOptions);
 
-        // Create driver
-        AndroidDriver driver = new AndroidDriver(new URL(url), options);
-        System.out.println("Connected to BrowserStack successfully!");
-
-        return driver;
+        try {
+            // Create driver using URI instead of deprecated URL constructor
+            AndroidDriver driver = new AndroidDriver(URI.create(url).toURL(), options);
+            logger.info("Connected to BrowserStack successfully!");
+            return driver;
+        } catch (Exception e) {
+            throw new BrowserStackDriverException("Failed to create Android driver", e);
+        }
+    }
+    
+    /**
+     * Custom exception for BrowserStack driver errors.
+     */
+    public static class BrowserStackDriverException extends Exception {
+        public BrowserStackDriverException(String message) {
+            super(message);
+        }
+        
+        public BrowserStackDriverException(String message, Throwable cause) {
+            super(message, cause);
+        }
     }
 }

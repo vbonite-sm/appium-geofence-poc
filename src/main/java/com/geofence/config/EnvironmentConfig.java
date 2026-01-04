@@ -12,7 +12,9 @@ import java.util.Properties;
 /**
  * Environment-aware configuration manager with support for YAML and properties files.
  * Supports configuration override via system properties and environment variables.
+ * Uses Singleton pattern for consistent configuration access across the application.
  */
+@SuppressWarnings({"java:S6548", "java:S3077"}) // Singleton pattern is intentional; volatile is sufficient here
 public class EnvironmentConfig {
 
     private static final Logger log = LoggerFactory.getLogger(EnvironmentConfig.class);
@@ -111,7 +113,6 @@ public class EnvironmentConfig {
         return env != null ? env : DEFAULT_ENV;
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> loadConfiguration() {
         Map<String, Object> mergedConfig = new HashMap<>();
 
@@ -130,7 +131,6 @@ public class EnvironmentConfig {
         return mergedConfig;
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> loadYamlConfig(String filename) {
         String path = CONFIG_DIR + filename;
         try (InputStream is = getClass().getClassLoader().getResourceAsStream(path)) {

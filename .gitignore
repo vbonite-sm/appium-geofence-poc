@@ -41,3 +41,6 @@ build/
 # Ignore Allure results and binaries
 allure-results/
 .allure/
+### Credentials & Secrets ###
+jira-config.properties
+**/jira-config.properties

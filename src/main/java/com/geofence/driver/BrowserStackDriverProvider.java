@@ -9,7 +9,7 @@ import org.openqa.selenium.MutableCapabilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -44,7 +44,7 @@ public class BrowserStackDriverProvider implements DriverProvider {
         return true;
     }
 
-    private AndroidDriver createAndroidDriver() throws Exception {
+    private AndroidDriver createAndroidDriver() throws java.net.MalformedURLException {
         MutableCapabilities capabilities = new MutableCapabilities();
 
         Map<String, Object> bstackOptions = new HashMap<>();
@@ -65,10 +65,10 @@ public class BrowserStackDriverProvider implements DriverProvider {
         capabilities.setCapability("appium:automationName", "UiAutomator2");
 
         log.info("Creating Android driver for device: {}", config.getBrowserStackDevice());
-        return new AndroidDriver(new URL(HUB_URL), capabilities);
+        return new AndroidDriver(URI.create(HUB_URL).toURL(), capabilities);
     }
 
-    private IOSDriver createIOSDriver() throws Exception {
+    private IOSDriver createIOSDriver() throws java.net.MalformedURLException {
         MutableCapabilities capabilities = new MutableCapabilities();
 
         Map<String, Object> bstackOptions = new HashMap<>();
@@ -89,7 +89,7 @@ public class BrowserStackDriverProvider implements DriverProvider {
         capabilities.setCapability("appium:automationName", "XCUITest");
 
         log.info("Creating iOS driver for device: {}", config.getBrowserStackIOSDevice());
-        return new IOSDriver(new URL(HUB_URL), capabilities);
+        return new IOSDriver(URI.create(HUB_URL).toURL(), capabilities);
     }
 
     private void validateCredentials() {

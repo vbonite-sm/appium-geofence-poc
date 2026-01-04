@@ -1,0 +1,322 @@
+package com.geofence.integrations.confluence;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Properties;
+
+/**
+ * CI/CD integration utility for publishing test reports to Confluence.
+ * Called by Jenkins pipeline after test execution.
+ */
+public class ConfluenceReportPublisher {
+
+    private static final Logger logger = LoggerFactory.getLogger(ConfluenceReportPublisher.class);
+
+    private final ConfluenceClient confluenceClient;
+    private String buildNumber;
+    private String buildUrl;
+    private String allureUrl;
+
+    public ConfluenceReportPublisher() {
+        Properties props = loadProperties();
+        
+        String baseUrl = getConfigValue(props, "confluence.base.url", "CONFLUENCE_BASE_URL");
+        String email = getConfigValue(props, "jira.email", "JIRA_EMAIL");
+        String apiToken = getConfigValue(props, "jira.api.token", "JIRA_API_TOKEN");
+        String spaceKey = getConfigValue(props, "confluence.space.key", "CONFLUENCE_SPACE_KEY");
+        
+        // Fallback to Jira URL if Confluence URL not set
+        if (baseUrl == null || baseUrl.isEmpty()) {
+            String jiraUrl = getConfigValue(props, "jira.base.url", "JIRA_BASE_URL");
+            if (jiraUrl != null) {
+                baseUrl = jiraUrl.endsWith("/") ? jiraUrl + "wiki" : jiraUrl + "/wiki";
+            }
+        }
+        
+        this.confluenceClient = new ConfluenceClient(baseUrl, email, apiToken, spaceKey);
+    }
+
+    private Properties loadProperties() {
+        Properties props = new Properties();
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("jira-config.properties")) {
+            if (is != null) {
+                props.load(is);
+            }
+        } catch (IOException e) {
+            logger.warn("Could not load jira-config.properties: {}", e.getMessage());
+        }
+        return props;
+    }
+
+    private String getConfigValue(Properties props, String propKey, String envKey) {
+        String envValue = System.getenv(envKey);
+        return envValue != null ? envValue : props.getProperty(propKey);
+    }
+
+    public void setBuildInfo(String buildNumber, String buildUrl, String allureUrl) {
+        this.buildNumber = buildNumber;
+        this.buildUrl = buildUrl;
+        this.allureUrl = allureUrl;
+    }
+
+    /**
+     * Parses test results and publishes a summary report to Confluence
+     */
+    public String publishTestReport(String resultsDir) {
+        TestSummary summary = aggregateTestResults(resultsDir);
+        String content = generateReportContent(summary);
+        
+        String title = String.format("Test Report - Build #%s - %s", 
+            buildNumber != null ? buildNumber : "Local",
+            LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+        
+        String pageId = confluenceClient.createPage(title, content, null);
+        
+        if (pageId != null) {
+            logger.info("Published test report to Confluence: {}", pageId);
+        } else {
+            logger.error("Failed to publish test report to Confluence");
+        }
+        
+        return pageId;
+    }
+
+    private TestSummary aggregateTestResults(String resultsDir) {
+        TestSummary summary = new TestSummary();
+        File dir = new File(resultsDir);
+        
+        if (!dir.exists() || !dir.isDirectory()) {
+            logger.warn("Results directory not found: {}", resultsDir);
+            return summary;
+        }
+
+        File[] xmlFiles = dir.listFiles((d, name) -> name.endsWith(".xml") && !name.startsWith("TEST-"));
+        if (xmlFiles == null || xmlFiles.length == 0) {
+            // Try TEST-*.xml pattern
+            xmlFiles = dir.listFiles((d, name) -> name.startsWith("TEST-") && name.endsWith(".xml"));
+        }
+        
+        if (xmlFiles == null) {
+            return summary;
+        }
+
+        for (File xmlFile : xmlFiles) {
+            try {
+                parseTestSuite(xmlFile, summary);
+            } catch (Exception e) {
+                logger.error("Error processing file {}: {}", xmlFile.getName(), e.getMessage());
+            }
+        }
+
+        return summary;
+    }
+
+    private void parseTestSuite(File xmlFile, TestSummary summary) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document doc = builder.parse(new FileInputStream(xmlFile));
+        
+        NodeList suites = doc.getElementsByTagName("testsuite");
+        
+        for (int i = 0; i < suites.getLength(); i++) {
+            Element suite = (Element) suites.item(i);
+            
+            int tests = parseIntAttribute(suite, "tests", 0);
+            int failures = parseIntAttribute(suite, "failures", 0);
+            int errors = parseIntAttribute(suite, "errors", 0);
+            int skipped = parseIntAttribute(suite, "skipped", 0);
+            double time = parseDoubleAttribute(suite, "time", 0.0);
+            
+            summary.totalTests += tests;
+            summary.failures += failures;
+            summary.errors += errors;
+            summary.skipped += skipped;
+            summary.totalTime += time;
+            
+            String suiteName = suite.getAttribute("name");
+            if (suiteName != null && !suiteName.isEmpty()) {
+                summary.suites.add(new SuiteResult(suiteName, tests, failures + errors, skipped, time));
+            }
+        }
+        
+        summary.passed = summary.totalTests - summary.failures - summary.errors - summary.skipped;
+    }
+
+    private int parseIntAttribute(Element element, String attr, int defaultValue) {
+        try {
+            String value = element.getAttribute(attr);
+            return value != null && !value.isEmpty() ? Integer.parseInt(value) : defaultValue;
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    private double parseDoubleAttribute(Element element, String attr, double defaultValue) {
+        try {
+            String value = element.getAttribute(attr);
+            return value != null && !value.isEmpty() ? Double.parseDouble(value) : defaultValue;
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    private String generateReportContent(TestSummary summary) {
+        StringBuilder html = new StringBuilder();
+        
+        // Header
+        html.append("<h1>🧪 Test Execution Report</h1>\n");
+        
+        // Build Info
+        html.append("<h2>📋 Build Information</h2>\n");
+        html.append("<table>\n");
+        html.append("<tbody>\n");
+        if (buildNumber != null) {
+            html.append("<tr><td><strong>Build Number</strong></td><td>").append(buildNumber).append("</td></tr>\n");
+        }
+        html.append("<tr><td><strong>Execution Date</strong></td><td>")
+            .append(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
+            .append("</td></tr>\n");
+        html.append("<tr><td><strong>Total Duration</strong></td><td>")
+            .append(String.format("%.2f seconds", summary.totalTime))
+            .append("</td></tr>\n");
+        if (buildUrl != null) {
+            html.append("<tr><td><strong>Jenkins Build</strong></td><td><a href=\"")
+                .append(buildUrl).append("\">View Build</a></td></tr>\n");
+        }
+        if (allureUrl != null) {
+            html.append("<tr><td><strong>Allure Report</strong></td><td><a href=\"")
+                .append(allureUrl).append("\">View Detailed Report</a></td></tr>\n");
+        }
+        html.append("</tbody>\n</table>\n");
+        
+        // Summary Panel
+        double passRate = summary.totalTests > 0 
+            ? (double) summary.passed / summary.totalTests * 100 : 0;
+        String statusColor = passRate == 100 ? "#00875A" : passRate >= 80 ? "#FF991F" : "#DE350B";
+        String statusIcon = passRate == 100 ? "✅" : passRate >= 80 ? "⚠️" : "❌";
+        
+        html.append("<h2>📊 Results Summary</h2>\n");
+        html.append("<ac:structured-macro ac:name=\"panel\">\n");
+        html.append("<ac:parameter ac:name=\"borderColor\">").append(statusColor).append("</ac:parameter>\n");
+        html.append("<ac:rich-text-body>\n");
+        html.append("<p style=\"font-size: 24px; color: ").append(statusColor).append(";\">")
+            .append(statusIcon).append(" Pass Rate: ")
+            .append(String.format("%.1f%%", passRate))
+            .append("</p>\n");
+        html.append("</ac:rich-text-body>\n");
+        html.append("</ac:structured-macro>\n");
+        
+        // Results Table
+        html.append("<table>\n");
+        html.append("<thead><tr><th>Status</th><th>Count</th></tr></thead>\n");
+        html.append("<tbody>\n");
+        html.append("<tr><td style=\"color: #00875A;\">✅ Passed</td><td><strong>")
+            .append(summary.passed).append("</strong></td></tr>\n");
+        html.append("<tr><td style=\"color: #DE350B;\">❌ Failed</td><td><strong>")
+            .append(summary.failures + summary.errors).append("</strong></td></tr>\n");
+        html.append("<tr><td style=\"color: #6B778C;\">⏭️ Skipped</td><td><strong>")
+            .append(summary.skipped).append("</strong></td></tr>\n");
+        html.append("<tr><td><strong>Total</strong></td><td><strong>")
+            .append(summary.totalTests).append("</strong></td></tr>\n");
+        html.append("</tbody>\n</table>\n");
+        
+        // Suite Breakdown
+        if (!summary.suites.isEmpty()) {
+            html.append("<h2>📁 Test Suite Breakdown</h2>\n");
+            html.append("<table>\n");
+            html.append("<thead><tr><th>Suite</th><th>Tests</th><th>Failed</th><th>Skipped</th><th>Duration</th></tr></thead>\n");
+            html.append("<tbody>\n");
+            
+            for (SuiteResult suite : summary.suites) {
+                String rowColor = suite.failed > 0 ? "#FFEBE6" : "#E3FCEF";
+                html.append("<tr style=\"background-color: ").append(rowColor).append(";\">")
+                    .append("<td>").append(suite.name).append("</td>")
+                    .append("<td>").append(suite.tests).append("</td>")
+                    .append("<td>").append(suite.failed).append("</td>")
+                    .append("<td>").append(suite.skipped).append("</td>")
+                    .append("<td>").append(String.format("%.2fs", suite.time)).append("</td>")
+                    .append("</tr>\n");
+            }
+            
+            html.append("</tbody>\n</table>\n");
+        }
+        
+        // Footer
+        html.append("<hr/>\n");
+        html.append("<p><em>This report was automatically generated by the Geofence Automation Framework.</em></p>\n");
+        
+        return html.toString();
+    }
+
+    public static void main(String[] args) {
+        ConfluenceReportPublisher publisher = new ConfluenceReportPublisher();
+        
+        String buildNumber = null;
+        String buildUrl = null;
+        String allureUrl = null;
+        String resultsDir = "target/surefire-reports";
+        
+        // Parse command line arguments
+        for (String arg : args) {
+            if (arg.startsWith("--build-number=")) {
+                buildNumber = arg.substring("--build-number=".length());
+            } else if (arg.startsWith("--build-url=")) {
+                buildUrl = arg.substring("--build-url=".length());
+            } else if (arg.startsWith("--allure-url=")) {
+                allureUrl = arg.substring("--allure-url=".length());
+            } else if (arg.startsWith("--results-dir=")) {
+                resultsDir = arg.substring("--results-dir=".length());
+            }
+        }
+        
+        publisher.setBuildInfo(buildNumber, buildUrl, allureUrl);
+        
+        logger.info("Publishing test report from: {}", resultsDir);
+        String pageId = publisher.publishTestReport(resultsDir);
+        
+        if (pageId != null) {
+            logger.info("Successfully published report to Confluence. Page ID: {}", pageId);
+        } else {
+            logger.error("Failed to publish report to Confluence");
+            System.exit(1);
+        }
+    }
+
+    private static class TestSummary {
+        int totalTests = 0;
+        int passed = 0;
+        int failures = 0;
+        int errors = 0;
+        int skipped = 0;
+        double totalTime = 0.0;
+        java.util.List<SuiteResult> suites = new java.util.ArrayList<>();
+    }
+
+    private static class SuiteResult {
+        String name;
+        int tests;
+        int failed;
+        int skipped;
+        double time;
+
+        SuiteResult(String name, int tests, int failed, int skipped, double time) {
+            this.name = name;
+            this.tests = tests;
+            this.failed = failed;
+            this.skipped = skipped;
+            this.time = time;
+        }
+    }
+}
