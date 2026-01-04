@@ -1,4 +1,4 @@
-package com.geofence.tests;
+package com.geofence.tests.base;
 
 import com.geofence.config.EnvironmentConfig;
 import com.geofence.driver.DriverFactory;

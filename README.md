@@ -56,18 +56,19 @@ src/
 │
 ├── test/java/com/geofence/
 │   ├── tests/
-│   │   ├── BaseTest.java                # Unified base with Template Method
-│   │   ├── BaseTestAndroid.java         # Android-specific defaults
-│   │   ├── BaseTestiOS.java             # iOS-specific defaults
-│   │   ├── GeofenceTest.java            # Android geofence tests
-│   │   ├── GeofenceTestiOS.java         # iOS geofence tests
-│   │   ├── NavigationTest.java
+│   │   ├── base/
+│   │   │   └── BaseTest.java            # Unified base with Template Method
+│   │   ├── android/
+│   │   │   ├── BaseTestAndroid.java     # Android-specific defaults
+│   │   │   ├── GeofenceTest.java        # Android geofence tests
+│   │   │   └── NavigationTest.java      # Android navigation tests
+│   │   ├── ios/
+│   │   │   ├── BaseTestiOS.java         # iOS-specific defaults
+│   │   │   └── GeofenceTestiOS.java     # iOS geofence tests
 │   │   └── api/
+│   │       ├── GeofenceApiTest.java     # Geofence API tests
 │   │       ├── JiraApiTests.java        # Jira integration tests
 │   │       └── ConfluenceApiTests.java  # Confluence integration tests
-│   ├── api/
-│   │   ├── BaseApiTest.java
-│   │   └── GeofenceApiTest.java
 │   ├── dataproviders/
 │   │   └── GeofenceDataProvider.java    # TestNG data providers
 │   ├── listeners/

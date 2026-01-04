@@ -1,4 +1,4 @@
-package com.geofence.tests;
+package com.geofence.tests.android;
 
 import com.geofence.dataproviders.GeofenceDataProvider;
 import com.geofence.dataproviders.GeofenceDataProvider.TestLocations;
@@ -7,6 +7,7 @@ import com.geofence.models.GeoLocation;
 import com.geofence.pages.GeofenceHomePage;
 import com.geofence.services.GeofenceService;
 import com.geofence.services.LocationService;
+import com.geofence.tests.base.BaseTest;
 import io.qameta.allure.*;
 import org.testng.Assert;
 import org.testng.annotations.Test;

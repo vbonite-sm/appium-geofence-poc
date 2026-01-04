@@ -1,4 +1,4 @@
-package com.geofence.tests;
+package com.geofence.tests.ios;
 
 import com.geofence.dataproviders.GeofenceDataProvider.TestLocations;
 import com.geofence.listeners.RetryAnalyzer;

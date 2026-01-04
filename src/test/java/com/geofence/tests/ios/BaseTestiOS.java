@@ -1,7 +1,8 @@
-package com.geofence.tests;
+package com.geofence.tests.ios;
 
 import com.geofence.models.ExecutionMode;
 import com.geofence.models.Platform;
+import com.geofence.tests.base.BaseTest;
 import io.appium.java_client.ios.IOSDriver;
 
 /**

@@ -11,7 +11,14 @@
 
     <test name="Android Geofence Tests">
         <classes>
-            <class name="com.geofence.tests.GeofenceTest"/>
+            <class name="com.geofence.tests.android.GeofenceTest"/>
+        </classes>
+    </test>
+    
+    <test name="iOS Geofence Tests">
+        <parameter name="platform" value="ios"/>
+        <classes>
+            <class name="com.geofence.tests.ios.GeofenceTestiOS"/>
         </classes>
     </test>
     

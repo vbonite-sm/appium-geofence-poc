@@ -6,7 +6,7 @@
 
     <test name="Android Geofence Tests - Local">
         <classes>
-            <class name="com.geofence.tests.GeofenceTest"/>
+            <class name="com.geofence.tests.android.GeofenceTest"/>
         </classes>
     </test>
 
