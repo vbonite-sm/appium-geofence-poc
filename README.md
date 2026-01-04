@@ -1,6 +1,6 @@
 # Appium Geofence POC
 
-Mobile test automation framework for geofence functionality testing on Android and iOS platforms. Supports local Appium execution and BrowserStack cloud testing with Jenkins CI/CD integration.
+Mobile test automation framework for geofence functionality testing on Android and iOS platforms. Supports local Appium execution and BrowserStack cloud testing with Jenkins CI/CD integration, **Jira defect tracking**, and **Confluence test reporting**.
 
 ## Tech Stack
 
@@ -10,6 +10,8 @@ Mobile test automation framework for geofence functionality testing on Android a
 - **REST Assured 5.4.0** - API testing
 - **Allure 2.25.0** - Test reporting
 - **BrowserStack SDK 1.15.0** - Cloud device testing
+- **Jira REST API** - Automated defect creation
+- **Confluence REST API** - Test report publishing
 
 ## Project Structure
 
@@ -25,6 +27,15 @@ src/
 │   │   ├── DriverProvider.java          # Interface for driver creation
 │   │   ├── LocalDriverProvider.java     # Local Appium server driver
 │   │   └── BrowserStackDriverProvider.java
+│   ├── integrations/
+│   │   ├── jira/
+│   │   │   ├── JiraClient.java          # Jira REST API client
+│   │   │   ├── JiraConfig.java          # Jira configuration loader
+│   │   │   ├── JiraDefectCreator.java   # CI/CD defect creation utility
+│   │   │   └── JiraTestListener.java    # Auto-create defects on test failure
+│   │   └── confluence/
+│   │       ├── ConfluenceClient.java    # Confluence REST API client
+│   │       └── ConfluenceReportPublisher.java  # CI/CD report publishing
 │   ├── models/
 │   │   ├── GeoLocation.java             # Location model with distance calculation
 │   │   ├── GeoFenceRequest.java         # API request model
@@ -40,6 +51,9 @@ src/
 │       ├── LocationService.java         # Location simulation operations
 │       └── GeofenceService.java         # Geofence business logic
 │
+├── main/resources/
+│   └── jira-config.properties.example   # Template for Jira/Confluence credentials
+│
 ├── test/java/com/geofence/
 │   ├── tests/
 │   │   ├── BaseTest.java                # Unified base with Template Method
@@ -47,7 +61,10 @@ src/
 │   │   ├── BaseTestiOS.java             # iOS-specific defaults
 │   │   ├── GeofenceTest.java            # Android geofence tests
 │   │   ├── GeofenceTestiOS.java         # iOS geofence tests
-│   │   └── NavigationTest.java
+│   │   ├── NavigationTest.java
+│   │   └── api/
+│   │       ├── JiraApiTests.java        # Jira integration tests
+│   │       └── ConfluenceApiTests.java  # Confluence integration tests
 │   ├── api/
 │   │   ├── BaseApiTest.java
 │   │   └── GeofenceApiTest.java
@@ -65,6 +82,7 @@ src/
     │   ├── application-local.yaml       # Local overrides
     │   ├── application-browserstack.yaml
     │   └── application-ci.yaml
+    ├── testng-atlassian.xml             # Jira/Confluence test suite
     └── testdata/
         ├── locations.json               # Test location coordinates
         ├── geofence-scenarios.json      # Test scenarios
@@ -82,6 +100,7 @@ src/
 | Page Object | All page classes extend `BasePage` |
 | Service Layer | `LocationService`, `GeofenceService` encapsulate business logic |
 | Data Provider | `GeofenceDataProvider` supplies test data to TestNG |
+| AAA Pattern | All tests follow Arrange-Act-Assert structure with clear comments |
 
 ## Setup
 
@@ -113,6 +132,28 @@ set BROWSERSTACK_ACCESSKEY=your_access_key
 export BROWSERSTACK_USERNAME=your_username
 export BROWSERSTACK_ACCESSKEY=your_access_key
 ```
+
+For Jira/Confluence integration:
+
+```bash
+# Windows
+set JIRA_BASE_URL=https://your-site.atlassian.net
+set JIRA_EMAIL=your-email@example.com
+set JIRA_API_TOKEN=your_api_token
+set JIRA_PROJECT_KEY=GEO
+set CONFLUENCE_BASE_URL=https://your-site.atlassian.net/wiki
+set CONFLUENCE_SPACE_KEY=GEO
+
+# Linux/macOS
+export JIRA_BASE_URL=https://your-site.atlassian.net
+export JIRA_EMAIL=your-email@example.com
+export JIRA_API_TOKEN=your_api_token
+export JIRA_PROJECT_KEY=GEO
+export CONFLUENCE_BASE_URL=https://your-site.atlassian.net/wiki
+export CONFLUENCE_SPACE_KEY=GEO
+```
+
+Alternatively, copy `src/main/resources/jira-config.properties.example` to `jira-config.properties` and fill in your credentials.
 
 ## Configuration
 
@@ -205,29 +246,102 @@ mvn clean test -Dtest=GeofenceApiTest -Dorg.slf4j.simpleLogger.defaultLogLevel=d
 
 API tests use REST Assured and validate geofence API endpoints.
 
+## Jira & Confluence Integration
+
+### Run Atlassian API Tests
+
+```bash
+# Run Jira integration tests
+mvn clean test -Dtest=JiraApiTests
+
+# Run Confluence integration tests
+mvn clean test -Dtest=ConfluenceApiTests
+
+# Run all Atlassian tests
+mvn clean test -DsuiteXmlFile=src/test/resources/testng-atlassian.xml
+```
+
+### Auto-Create Jira Defects on Test Failure
+
+Add `JiraTestListener` to your test to automatically create Jira bugs when tests fail:
+
+```java
+@Listeners(JiraTestListener.class)
+public class MyTest extends BaseTest {
+    // Tests that fail will automatically create Jira issues
+}
+```
+
+### Programmatic Jira Integration
+
+```java
+JiraClient jiraClient = new JiraClient();
+
+// Create a defect
+String issueKey = jiraClient.createDefect(
+    "TestName",
+    "Error message",
+    "Stack trace"
+);
+
+// Add a comment
+jiraClient.addComment(issueKey, "Additional details");
+```
+
+### Publish Test Reports to Confluence
+
+```java
+ConfluenceClient client = new ConfluenceClient(baseUrl, email, token, spaceKey);
+
+// Create a test report page
+String pageId = client.createTestReportPage(
+    "Test Suite Name",
+    10,  // passed
+    2,   // failed
+    1,   // skipped
+    "https://allure-report-url"
+);
+```
+
 ## CI/CD
 
 ### Jenkins Pipeline
 
-The project includes a `Jenkinsfile` for automated execution:
+The project includes a `Jenkinsfile` with full CI/CD capabilities:
 
-```groovy
-// Triggered on push to main branch
-// Stages: Checkout -> Build -> Test -> Report
-```
+**Pipeline Stages:**
+1. **Checkout** - Clone repository
+2. **Build** - Compile project
+3. **Run Tests** - Execute selected test type
+4. **Generate Allure Report** - Create visual test reports
+5. **Create Jira Defects** - Auto-create bugs for failed tests
+6. **Publish to Confluence** - Upload test report to Confluence
 
-Pipeline parameters:
-- `EXECUTION_MODE`: Target execution environment
-- `PLATFORM`: Target platform
-- `BROWSERSTACK_USERNAME`: Credential binding
-- `BROWSERSTACK_ACCESSKEY`: Credential binding
+**Pipeline Parameters:**
+
+| Parameter | Options | Description |
+|-----------|---------|-------------|
+| `TEST_TYPE` | `all`, `android-local`, `android-browserstack`, `ios-browserstack`, `api`, `atlassian-api` | Select tests to run |
+| `CREATE_JIRA_DEFECTS` | `true`/`false` | Auto-create Jira bugs for failures |
+| `PUBLISH_TO_CONFLUENCE` | `true`/`false` | Publish test report to Confluence |
+
+**Required Jenkins Credentials:**
+
+| Credential ID | Type | Description |
+|--------------|------|-------------|
+| `browserstack-username` | Secret text | BrowserStack username |
+| `browserstack-accesskey` | Secret text | BrowserStack access key |
+| `jira-base-url` | Secret text | Jira Cloud URL |
+| `jira-email` | Secret text | Atlassian account email |
+| `jira-api-token` | Secret text | Atlassian API token |
+| `confluence-base-url` | Secret text | Confluence Cloud URL |
 
 ### Running in Jenkins
 
 1. Create a new Pipeline job
 2. Point to repository containing `Jenkinsfile`
-3. Configure BrowserStack credentials in Jenkins Credentials store
-4. Run the pipeline
+3. Add credentials in Jenkins (Manage Jenkins → Credentials)
+4. Run the pipeline with desired parameters
 
 ## Test Reports
 
@@ -292,4 +406,11 @@ public void testBoundary(GeoLocation location, boolean expectedInside) {
 | Local iOS not supported | iOS testing requires macOS. Use BrowserStack on Windows. |
 | BrowserStack auth failed | Verify `BROWSERSTACK_USERNAME` and `BROWSERSTACK_ACCESSKEY` are set |
 | Appium connection refused | Ensure Appium server is running on configured port |
+| Jira 401 Unauthorized | Check `JIRA_EMAIL` and `JIRA_API_TOKEN` are correct |
+| Confluence space not found | Verify `CONFLUENCE_SPACE_KEY` matches an existing space |
+| API token invalid | Generate new token at https://id.atlassian.com/manage-profile/security/api-tokens |
+
+## License
+
+MIT
 
