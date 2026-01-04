@@ -1,74 +1,34 @@
 package com.geofence.tests;
 
-import com.geofence.utils.BrowserStackiOSDriver;
+import com.geofence.models.ExecutionMode;
+import com.geofence.models.Platform;
 import io.appium.java_client.ios.IOSDriver;
-import org.openqa.selenium.JavascriptExecutor;
-import org.testng.ITestResult;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-
-import java.time.Duration;
 
 /**
- * Base class for iOS tests.
- * Runs on BrowserStack only (no local iOS simulator on Windows).
+ * Base class for iOS-specific tests.
+ * Extends BaseTest with iOS defaults and convenience methods.
  */
-public class BaseTestiOS {
+public abstract class BaseTestiOS extends BaseTest {
 
-    protected IOSDriver driver;
-
-    @BeforeMethod
-    public void setUp() throws Exception {
-        System.out.println("========================================");
-        System.out.println("STARTING iOS TEST SETUP");
-        System.out.println("Platform: iOS (BrowserStack)");
-        System.out.println("========================================");
-
-        driver = BrowserStackiOSDriver.createDriver();
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
-
-        System.out.println("========================================");
-        System.out.println("iOS APP LAUNCHED SUCCESSFULLY!");
-        System.out.println("========================================");
+    @Override
+    protected Platform getDefaultPlatform() {
+        return Platform.IOS;
     }
 
-    @AfterMethod
-    public void tearDown(ITestResult result) {
-        System.out.println("========================================");
-        System.out.println("CLEANING UP iOS TEST");
-        System.out.println("========================================");
-
-        if (driver != null) {
-            reportToBrowserStack(result);
-            driver.quit();
-        }
-
-        System.out.println("iOS Driver quit successfully");
+    @Override
+    protected ExecutionMode getDefaultExecutionMode() {
+        return ExecutionMode.BROWSERSTACK;
     }
 
     /**
-     * Report test status to BrowserStack
+     * Convenience method to get the iOS driver directly.
      */
-    private void reportToBrowserStack(ITestResult result) {
-        try {
-            JavascriptExecutor js = (JavascriptExecutor) driver;
+    protected IOSDriver ios() {
+        return getIOSDriver();
+    }
 
-            if (result.isSuccess()) {
-                js.executeScript("browserstack_executor: {\"action\": \"setSessionStatus\", \"arguments\": {\"status\": \"passed\", \"reason\": \"Test passed\"}}");
-                System.out.println("BrowserStack: iOS Test Marked as PASSED");
-            } else {
-                String reason = result.getThrowable() != null
-                        ? result.getThrowable().getMessage()
-                        : "Test failed";
-                reason = reason.replace("\"", "'").replace("\n", " ");
-                if (reason.length() > 200) {
-                    reason = reason.substring(0, 200) + "...";
-                }
-                js.executeScript("browserstack_executor: {\"action\": \"setSessionStatus\", \"arguments\": {\"status\": \"failed\", \"reason\": \"" + reason + "\"}}");
-                System.out.println("BrowserStack: iOS Test Marked as FAILED - " + reason);
-            }
-        } catch (Exception e) {
-            System.err.println("Failed to report status to BrowserStack: " + e.getMessage());
-        }
+    @Override
+    protected void onDriverInitialized() {
+        log.debug("iOS driver ready: {}", driver.getCapabilities().getBrowserName());
     }
 }
