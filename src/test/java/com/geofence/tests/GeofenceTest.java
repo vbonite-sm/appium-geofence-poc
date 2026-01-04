@@ -1,9 +1,12 @@
 package com.geofence.tests;
 
+import com.geofence.dataproviders.GeofenceDataProvider;
+import com.geofence.dataproviders.GeofenceDataProvider.TestLocations;
+import com.geofence.listeners.RetryAnalyzer;
+import com.geofence.models.GeoLocation;
 import com.geofence.pages.GeofenceHomePage;
-import com.geofence.utils.LocationUtils;
-import com.geofence.utils.LocationUtils.GeoLocation;
-import com.geofence.utils.LocationUtils.TestLocations;
+import com.geofence.services.GeofenceService;
+import com.geofence.services.LocationService;
 import io.qameta.allure.*;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -13,105 +16,102 @@ import org.testng.annotations.Test;
 public class GeofenceTest extends BaseTest {
 
     private static final double GEOFENCE_RADIUS_METERS = 100.0;
+    private static final int APP_LOAD_RETRIES = 3;
 
-    @Test(priority = 1, description = "TC-001: Verify app launches and geofence entry detection")
+    private GeofenceService geofenceService;
+    private LocationService locationService;
+    private GeofenceHomePage homePage;
+
+    @Override
+    protected void onDriverInitialized() {
+        locationService = new LocationService(driver);
+        geofenceService = new GeofenceService(locationService, GEOFENCE_RADIUS_METERS);
+        homePage = new GeofenceHomePage();
+    }
+
+    @Test(priority = 1, 
+          description = "TC-001: Verify app launches and geofence entry detection",
+          retryAnalyzer = RetryAnalyzer.class)
     @Story("Geofence Entry Detection")
     @Severity(SeverityLevel.CRITICAL)
     @Description("Launch geofencing app, set location inside geofence, verify app detects entry")
     public void testGeofenceEntry() {
-        System.out.println("========================================");
-        System.out.println("TC-001: GEOFENCE ENTRY TEST");
-        System.out.println("========================================");
+        log.info("TC-001: Testing geofence entry detection");
 
-        // Verify app launched - with retry
-        GeofenceHomePage homePage = new GeofenceHomePage();
-        boolean appLoaded = waitForAppToLoad(homePage, 3);
-        Assert.assertTrue(appLoaded, "Geofencing app should be loaded");
-        System.out.println("App launched successfully!");
+        Assert.assertTrue(geofenceService.waitForAppToLoad(homePage, APP_LOAD_RETRIES),
+                "Geofencing app should be loaded");
 
-        // Define locations
         GeoLocation center = TestLocations.GEOFENCE_CENTER;
         GeoLocation insideLocation = TestLocations.INSIDE_50M;
 
-        // Set location INSIDE geofence
-        System.out.println("Setting device location INSIDE geofence...");
-        LocationUtils.setLocation(driver, insideLocation);
+        locationService.setLocation(insideLocation);
 
-        // Verify location is inside geofence
-        boolean isInside = LocationUtils.isInsideGeofence(center, insideLocation, GEOFENCE_RADIUS_METERS);
-        Assert.assertTrue(isInside, "Device should be INSIDE the geofence");
+        boolean isInside = locationService.isInsideGeofence(center, insideLocation, GEOFENCE_RADIUS_METERS);
+        Assert.assertTrue(isInside, "Device should be inside the geofence");
 
-        double distance = LocationUtils.calculateDistance(center, insideLocation);
-        System.out.printf("Device is %.2fm from geofence center%n", distance);
-        System.out.println("RESULT: Device entered geofence successfully ✓");
+        double distance = locationService.calculateDistance(center, insideLocation);
+        log.info("Device is {:.2f}m from geofence center", distance);
 
-        System.out.println("========================================");
-        System.out.println("TC-001: PASSED");
-        System.out.println("========================================");
+        Allure.step("Verified device entered geofence at " + distance + "m from center");
     }
 
-    @Test(priority = 2, description = "TC-002: Verify 'kid out of geofence' when device exits 150m")
+    @Test(priority = 2, 
+          description = "TC-002: Verify exit alert when device leaves geofence by 150m",
+          retryAnalyzer = RetryAnalyzer.class)
     @Story("Geofence Exit Detection")
     @Severity(SeverityLevel.CRITICAL)
-    @Description("Simulate device exiting geofence (150m outside) - triggers 'kid out of geofence' alert")
+    @Description("Simulate device exiting geofence (150m outside) - triggers exit alert")
     public void testGeofenceExit150m() {
-        System.out.println("========================================");
-        System.out.println("TC-002: GEOFENCE EXIT TEST (150m)");
-        System.out.println("========================================");
+        log.info("TC-002: Testing geofence exit detection at 150m");
 
-        // Verify app launched - with retry
-        GeofenceHomePage homePage = new GeofenceHomePage();
-        boolean appLoaded = waitForAppToLoad(homePage, 3);
-        Assert.assertTrue(appLoaded, "Geofencing app should be loaded");
+        Assert.assertTrue(geofenceService.waitForAppToLoad(homePage, APP_LOAD_RETRIES),
+                "Geofencing app should be loaded");
 
         GeoLocation center = TestLocations.GEOFENCE_CENTER;
         GeoLocation outsideLocation = TestLocations.OUTSIDE_150M;
 
-        // Start INSIDE the geofence
-        System.out.println("Step 1: Setting initial location INSIDE geofence (center)");
-        LocationUtils.setLocation(driver, center);
+        // Start at center
+        locationService.setLocation(center);
+        Assert.assertTrue(locationService.isInsideGeofence(center, center, GEOFENCE_RADIUS_METERS),
+                "Device should start inside the geofence");
 
-        boolean initiallyInside = LocationUtils.isInsideGeofence(center, center, GEOFENCE_RADIUS_METERS);
-        Assert.assertTrue(initiallyInside, "Device should start INSIDE the geofence");
-        System.out.println("Device is at geofence center ✓");
+        // Simulate exit
+        geofenceService.simulateGeofenceExit(center, outsideLocation);
 
-        // Simulate movement to 150m OUTSIDE
-        System.out.println("Step 2: Simulating exit to 150m outside geofence...");
-        LocationUtils.simulateGeofenceExit(driver);
+        // Verify exit
+        boolean isOutside = !locationService.isInsideGeofence(center, outsideLocation, GEOFENCE_RADIUS_METERS);
+        Assert.assertTrue(isOutside, "Device should be outside the geofence");
 
-        // Verify location is now OUTSIDE
-        boolean isOutside = !LocationUtils.isInsideGeofence(center, outsideLocation, GEOFENCE_RADIUS_METERS);
-        Assert.assertTrue(isOutside, "Device should be OUTSIDE the geofence");
-
-        double distance = LocationUtils.calculateDistance(center, outsideLocation);
-        System.out.printf("Device is %.2fm from geofence center%n", distance);
+        double distance = locationService.calculateDistance(center, outsideLocation);
         Assert.assertTrue(distance >= 150, "Device should be at least 150m from center");
 
-        System.out.println("========================================");
-        System.out.println("🚨 ALERT: Kid out of geofence! (150m exit detected)");
-        System.out.println("========================================");
-        System.out.println("RESULT: Geofence exit detected successfully ✓");
-
-        System.out.println("========================================");
-        System.out.println("TC-002: PASSED");
-        System.out.println("========================================");
+        log.info("Exit alert triggered - device is {:.2f}m from geofence center", distance);
+        Allure.step("Verified geofence exit at " + distance + "m from center");
     }
 
-    /**
-     * Wait for app to load with retries
-     */
-    private boolean waitForAppToLoad(GeofenceHomePage homePage, int maxRetries) {
-        for (int i = 0; i < maxRetries; i++) {
-            System.out.println("Checking if app is loaded (attempt " + (i + 1) + "/" + maxRetries + ")...");
-            if (homePage.isPageLoaded()) {
-                return true;
-            }
-            try {
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
-        return false;
+    @Test(priority = 3,
+          description = "TC-003: Verify location boundary detection",
+          dataProvider = "testLocations",
+          dataProviderClass = GeofenceDataProvider.class)
+    @Story("Boundary Detection")
+    @Severity(SeverityLevel.NORMAL)
+    @Description("Test various locations relative to geofence boundary")
+    public void testLocationBoundary(GeoLocation location, String locationName, boolean expectedInside) {
+        log.info("Testing location: {} - expected inside: {}", locationName, expectedInside);
+
+        Assert.assertTrue(geofenceService.waitForAppToLoad(homePage, APP_LOAD_RETRIES),
+                "Geofencing app should be loaded");
+
+        GeoLocation center = TestLocations.GEOFENCE_CENTER;
+        locationService.setLocation(location);
+
+        boolean actualInside = locationService.isInsideGeofence(center, location, GEOFENCE_RADIUS_METERS);
+        double distance = locationService.calculateDistance(center, location);
+
+        log.info("Location '{}' at {:.2f}m - inside: {}", locationName, distance, actualInside);
+
+        Assert.assertEquals(actualInside, expectedInside,
+                String.format("Location '%s' at %.2fm should be %s geofence",
+                        locationName, distance, expectedInside ? "inside" : "outside"));
     }
 }
