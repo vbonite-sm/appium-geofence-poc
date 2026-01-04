@@ -21,8 +21,10 @@ public class GeofenceApiTest extends BaseApiTest {
     public void testCreateGeoFence() {
         log.info("API-001: Create a new GeoFence and verify creation");
 
+        // Arrange
         GeoFenceRequest payload = GeoFenceRequest.createDefault();
 
+        // Act
         Response response = given()
                 .spec(requestSpec)
                 .body(payload)
@@ -36,9 +38,10 @@ public class GeofenceApiTest extends BaseApiTest {
                 .extract().response();
 
         GeoFenceResponse created = response.as(GeoFenceResponse.class);
+
+        // Assert
         Assert.assertNotNull(created.getId(), "Created GeoFence ID should not be null");
         Assert.assertTrue(created.getId() > 0, "Created GeoFence ID should be greater than 0");
-
         log.info("Created GeoFence with ID: {}", created.getId());
         Allure.step("Created GeoFence: " + created);
     }
@@ -50,8 +53,10 @@ public class GeofenceApiTest extends BaseApiTest {
     public void testGetGeoFence() {
         log.info("API-002: Get a GeoFence and verify details");
 
+        // Arrange
         int geoFenceId = 1;
 
+        // Act
         Response response = given()
                 .spec(requestSpec)
                 .pathParam("id", geoFenceId)
@@ -66,10 +71,11 @@ public class GeofenceApiTest extends BaseApiTest {
                 .extract().response();
 
         GeoFenceResponse retrieved = response.as(GeoFenceResponse.class);
+
+        // Assert
         Assert.assertEquals(retrieved.getId().intValue(), geoFenceId);
         Assert.assertNotNull(retrieved.getTitle());
         Assert.assertTrue(retrieved.getUserId() > 0);
-
         log.info("Retrieved GeoFence: {}", retrieved);
         Allure.step("Retrieved GeoFence details successfully");
     }
@@ -81,6 +87,7 @@ public class GeofenceApiTest extends BaseApiTest {
     public void testUpdateGeoFence() {
         log.info("API-003: Update an existing GeoFence");
 
+        // Arrange
         int geoFenceId = 1;
         GeoFenceRequest updatePayload = GeoFenceRequest.builder()
                 .title("Updated Home GeoFence")
@@ -89,6 +96,7 @@ public class GeofenceApiTest extends BaseApiTest {
                 .radius(150.0)
                 .build();
 
+        // Act
         Response response = given()
                 .spec(requestSpec)
                 .pathParam("id", geoFenceId)
@@ -101,8 +109,9 @@ public class GeofenceApiTest extends BaseApiTest {
                 .extract().response();
 
         GeoFenceResponse updated = response.as(GeoFenceResponse.class);
-        Assert.assertEquals(updated.getTitle(), updatePayload.getTitle());
 
+        // Assert
+        Assert.assertEquals(updated.getTitle(), updatePayload.getTitle());
         log.info("Updated GeoFence: {}", updated);
     }
 
@@ -113,8 +122,10 @@ public class GeofenceApiTest extends BaseApiTest {
     public void testDeleteGeoFence() {
         log.info("API-004: Delete a GeoFence");
 
+        // Arrange
         int geoFenceId = 1;
 
+        // Act & Assert
         given()
                 .spec(requestSpec)
                 .pathParam("id", geoFenceId)

@@ -72,8 +72,8 @@ public class ConfluenceApiTests {
     @Story("Confluence Configuration")
     @Description("Verify Confluence configuration is loaded correctly")
     public void testConfluenceConfigurationLoaded() {
+        // Arrange
         System.out.println("Testing Confluence Configuration...");
-        
         if (!isConfigured) {
             System.out.println("Confluence not configured - using mock validation");
             System.out.println("To configure, set CONFLUENCE_BASE_URL, JIRA_EMAIL, " +
@@ -81,6 +81,9 @@ public class ConfluenceApiTests {
             return;
         }
         
+        // Act - Configuration is loaded in @BeforeClass
+        
+        // Assert
         assertNotNull(baseUrl, "Confluence base URL should be configured");
         assertNotNull(email, "Email should be configured");
         assertNotNull(spaceKey, "Space key should be configured");
@@ -91,18 +94,20 @@ public class ConfluenceApiTests {
     @Story("Create Page")
     @Description("Verify ability to create a new page in Confluence")
     public void testCreateConfluencePage() {
+        // Arrange
         if (!isConfigured) {
             System.out.println("Confluence not configured - skipping create page test");
             return;
         }
-        
         String title = "Test Page - Automation POC - " + System.currentTimeMillis();
         String content = "<h1>Test Page</h1>" +
                         "<p>This is a test page created by the automation framework.</p>" +
                         "<p>Created at: " + java.time.LocalDateTime.now() + "</p>";
         
+        // Act
         testPageId = confluenceClient.createPage(title, content, null);
         
+        // Assert
         assertNotNull(testPageId, "Page should be created successfully");
         System.out.println("Created test page with ID: " + testPageId);
     }
@@ -112,13 +117,16 @@ public class ConfluenceApiTests {
     @Story("Get Page")
     @Description("Verify ability to retrieve page details from Confluence")
     public void testGetPageDetails() {
+        // Arrange
         if (!isConfigured || testPageId == null) {
             System.out.println("Skipping get page test - no page available");
             return;
         }
         
+        // Act
         Map<String, Object> pageDetails = confluenceClient.getPage(testPageId);
         
+        // Assert
         assertNotNull(pageDetails, "Page details should be retrieved");
         assertEquals(pageDetails.get("id"), testPageId, "Page ID should match");
     }
@@ -128,18 +136,20 @@ public class ConfluenceApiTests {
     @Story("Update Page")
     @Description("Verify ability to update an existing Confluence page")
     public void testUpdatePage() {
+        // Arrange
         if (!isConfigured || testPageId == null) {
             System.out.println("Skipping update page test - no page available");
             return;
         }
-        
         String updatedTitle = "Updated Test Page - " + System.currentTimeMillis();
         String updatedContent = "<h1>Updated Test Page</h1>" +
                                "<p>This page was updated by the automation framework.</p>" +
                                "<p>Updated at: " + java.time.LocalDateTime.now() + "</p>";
         
+        // Act
         boolean result = confluenceClient.updatePage(testPageId, updatedTitle, updatedContent);
         
+        // Assert
         assertTrue(result, "Page should be updated successfully");
     }
     
@@ -148,19 +158,22 @@ public class ConfluenceApiTests {
     @Story("Create Test Report")
     @Description("Verify ability to create test execution report page")
     public void testCreateTestReportPage() {
+        // Arrange
         if (!isConfigured) {
             System.out.println("Confluence not configured - skipping report page test");
             return;
         }
+        String suiteName = "Geofence E2E Tests";
+        int passed = 4;
+        int failed = 0;
+        int skipped = 0;
+        String allureUrl = "http://localhost:8080/allure-report";
         
+        // Act
         String reportPageId = confluenceClient.createTestReportPage(
-            "Geofence E2E Tests",
-            4,  // passed
-            0,  // failed
-            0,  // skipped
-            "http://localhost:8080/allure-report"
-        );
+            suiteName, passed, failed, skipped, allureUrl);
         
+        // Assert
         assertNotNull(reportPageId, "Test report page should be created");
         System.out.println("Created test report page with ID: " + reportPageId);
     }
@@ -170,13 +183,17 @@ public class ConfluenceApiTests {
     @Story("Search Pages")
     @Description("Verify search functionality in Confluence")
     public void testSearchPages() {
+        // Arrange
         if (!isConfigured) {
             System.out.println("Confluence not configured - skipping search test");
             return;
         }
+        String searchQuery = "Test";
         
-        io.restassured.response.Response response = confluenceClient.searchPages("Test");
+        // Act
+        io.restassured.response.Response response = confluenceClient.searchPages(searchQuery);
         
+        // Assert
         assertNotNull(response, "Search response should not be null");
         assertEquals(response.getStatusCode(), 200, "Search should return 200 OK");
     }

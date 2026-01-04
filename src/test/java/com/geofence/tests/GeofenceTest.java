@@ -38,20 +38,20 @@ public class GeofenceTest extends BaseTest {
     public void testGeofenceEntry() {
         log.info("TC-001: Testing geofence entry detection");
 
+        // Arrange
+        GeoLocation center = TestLocations.GEOFENCE_CENTER;
+        GeoLocation insideLocation = TestLocations.INSIDE_50M;
         Assert.assertTrue(geofenceService.waitForAppToLoad(homePage, APP_LOAD_RETRIES),
                 "Geofencing app should be loaded");
 
-        GeoLocation center = TestLocations.GEOFENCE_CENTER;
-        GeoLocation insideLocation = TestLocations.INSIDE_50M;
-
+        // Act
         locationService.setLocation(insideLocation);
-
         boolean isInside = locationService.isInsideGeofence(center, insideLocation, GEOFENCE_RADIUS_METERS);
-        Assert.assertTrue(isInside, "Device should be inside the geofence");
-
         double distance = locationService.calculateDistance(center, insideLocation);
-        log.info("Device is {:.2f}m from geofence center", distance);
 
+        // Assert
+        Assert.assertTrue(isInside, "Device should be inside the geofence");
+        log.info("Device is {:.2f}m from geofence center", distance);
         Allure.step("Verified device entered geofence at " + distance + "m from center");
     }
 
@@ -64,27 +64,23 @@ public class GeofenceTest extends BaseTest {
     public void testGeofenceExit150m() {
         log.info("TC-002: Testing geofence exit detection at 150m");
 
-        Assert.assertTrue(geofenceService.waitForAppToLoad(homePage, APP_LOAD_RETRIES),
-                "Geofencing app should be loaded");
-
+        // Arrange
         GeoLocation center = TestLocations.GEOFENCE_CENTER;
         GeoLocation outsideLocation = TestLocations.OUTSIDE_150M;
-
-        // Start at center
+        Assert.assertTrue(geofenceService.waitForAppToLoad(homePage, APP_LOAD_RETRIES),
+                "Geofencing app should be loaded");
         locationService.setLocation(center);
         Assert.assertTrue(locationService.isInsideGeofence(center, center, GEOFENCE_RADIUS_METERS),
                 "Device should start inside the geofence");
 
-        // Simulate exit
+        // Act
         geofenceService.simulateGeofenceExit(center, outsideLocation);
-
-        // Verify exit
         boolean isOutside = !locationService.isInsideGeofence(center, outsideLocation, GEOFENCE_RADIUS_METERS);
-        Assert.assertTrue(isOutside, "Device should be outside the geofence");
-
         double distance = locationService.calculateDistance(center, outsideLocation);
-        Assert.assertTrue(distance >= 150, "Device should be at least 150m from center");
 
+        // Assert
+        Assert.assertTrue(isOutside, "Device should be outside the geofence");
+        Assert.assertTrue(distance >= 150, "Device should be at least 150m from center");
         log.info("Exit alert triggered - device is {:.2f}m from geofence center", distance);
         Allure.step("Verified geofence exit at " + distance + "m from center");
     }
@@ -99,17 +95,18 @@ public class GeofenceTest extends BaseTest {
     public void testLocationBoundary(GeoLocation location, String locationName, boolean expectedInside) {
         log.info("Testing location: {} - expected inside: {}", locationName, expectedInside);
 
+        // Arrange
+        GeoLocation center = TestLocations.GEOFENCE_CENTER;
         Assert.assertTrue(geofenceService.waitForAppToLoad(homePage, APP_LOAD_RETRIES),
                 "Geofencing app should be loaded");
 
-        GeoLocation center = TestLocations.GEOFENCE_CENTER;
+        // Act
         locationService.setLocation(location);
-
         boolean actualInside = locationService.isInsideGeofence(center, location, GEOFENCE_RADIUS_METERS);
         double distance = locationService.calculateDistance(center, location);
 
+        // Assert
         log.info("Location '{}' at {:.2f}m - inside: {}", locationName, distance, actualInside);
-
         Assert.assertEquals(actualInside, expectedInside,
                 String.format("Location '%s' at %.2fm should be %s geofence",
                         locationName, distance, expectedInside ? "inside" : "outside"));

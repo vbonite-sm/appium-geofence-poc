@@ -34,20 +34,20 @@ public class GeofenceTestiOS extends BaseTestiOS {
     public void testGeofenceEntryiOS() {
         log.info("TC-iOS-001: iOS Geofence Entry Test");
 
+        // Arrange
         Assert.assertNotNull(driver, "iOS Driver should be initialized");
         pause(3000);
-
         GeoLocation center = TestLocations.GEOFENCE_CENTER;
         GeoLocation insideLocation = TestLocations.INSIDE_50M;
 
+        // Act
         locationService.setLocation(insideLocation);
-
         boolean isInside = locationService.isInsideGeofence(center, insideLocation, GEOFENCE_RADIUS_METERS);
-        Assert.assertTrue(isInside, "iOS Device should be inside the geofence");
-
         double distance = locationService.calculateDistance(center, insideLocation);
-        log.info("iOS Device is {:.2f}m from geofence center", distance);
 
+        // Assert
+        Assert.assertTrue(isInside, "iOS Device should be inside the geofence");
+        log.info("iOS Device is {:.2f}m from geofence center", distance);
         Allure.step("iOS device entered geofence at " + distance + "m from center");
     }
 
@@ -60,28 +60,24 @@ public class GeofenceTestiOS extends BaseTestiOS {
     public void testGeofenceExit150miOS() {
         log.info("TC-iOS-002: iOS Geofence Exit Test (150m)");
 
+        // Arrange
         Assert.assertNotNull(driver, "iOS Driver should be initialized");
         pause(3000);
-
         GeoLocation center = TestLocations.GEOFENCE_CENTER;
         GeoLocation outsideLocation = TestLocations.OUTSIDE_150M;
-
-        // Start at center
         locationService.setLocation(center);
         Assert.assertTrue(
                 locationService.isInsideGeofence(center, center, GEOFENCE_RADIUS_METERS),
                 "iOS Device should start inside the geofence");
 
-        // Simulate exit
+        // Act
         locationService.simulateMovement(center, outsideLocation);
-
-        // Verify exit
         boolean isOutside = !locationService.isInsideGeofence(center, outsideLocation, GEOFENCE_RADIUS_METERS);
-        Assert.assertTrue(isOutside, "iOS Device should be outside the geofence");
-
         double distance = locationService.calculateDistance(center, outsideLocation);
-        Assert.assertTrue(distance >= 150, "iOS Device should be at least 150m from center");
 
+        // Assert
+        Assert.assertTrue(isOutside, "iOS Device should be outside the geofence");
+        Assert.assertTrue(distance >= 150, "iOS Device should be at least 150m from center");
         log.info("iOS exit alert triggered - device is {:.2f}m from geofence center", distance);
         Allure.step("iOS geofence exit detected at " + distance + "m from center");
     }

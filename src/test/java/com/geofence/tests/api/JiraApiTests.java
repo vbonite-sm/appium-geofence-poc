@@ -39,19 +39,24 @@ public class JiraApiTests {
     @Story("Jira Configuration")
     @Description("Verify Jira configuration is loaded correctly")
     public void testJiraConfigurationLoaded() {
+        // Arrange
         System.out.println("Testing Jira Configuration...");
-        
-        // If not configured, skip tests but don't fail
         if (!config.isConfigured()) {
             System.out.println("Jira not configured - using mock validation");
             assertNotNull(config);
             return;
         }
         
-        assertNotNull(config.getBaseUrl(), "Jira base URL should be configured");
-        assertNotNull(config.getEmail(), "Jira email should be configured");
-        assertNotNull(config.getProjectKey(), "Jira project key should be configured");
-        assertTrue(config.getBaseUrl().contains("atlassian.net"), 
+        // Act - Configuration is loaded in @BeforeClass
+        String baseUrl = config.getBaseUrl();
+        String email = config.getEmail();
+        String projectKey = config.getProjectKey();
+        
+        // Assert
+        assertNotNull(baseUrl, "Jira base URL should be configured");
+        assertNotNull(email, "Jira email should be configured");
+        assertNotNull(projectKey, "Jira project key should be configured");
+        assertTrue(baseUrl.contains("atlassian.net"), 
                    "Base URL should be Atlassian Cloud URL");
     }
     
@@ -60,21 +65,22 @@ public class JiraApiTests {
     @Story("Create Issue")
     @Description("Verify ability to create a new issue in Jira")
     public void testCreateJiraIssue() {
+        // Arrange
         if (!config.isConfigured()) {
             System.out.println("Jira not configured - skipping create test");
             return;
         }
-        
         String summary = "[Test] Automation POC Test Issue - " + System.currentTimeMillis();
         String description = "This is a test issue created by the automation framework.\n" +
                             "It can be safely deleted.";
         
+        // Act
         testIssueKey = jiraClient.createTask(summary, description);
         
+        // Assert
         assertNotNull(testIssueKey, "Issue should be created successfully");
         assertTrue(testIssueKey.startsWith(config.getProjectKey()), 
                    "Issue key should start with project key");
-        
         System.out.println("Created test issue: " + testIssueKey);
     }
     
@@ -83,16 +89,18 @@ public class JiraApiTests {
     @Story("Add Comment")
     @Description("Verify ability to add comments to Jira issues")
     public void testAddCommentToIssue() {
+        // Arrange
         if (!config.isConfigured() || testIssueKey == null) {
             System.out.println("Skipping comment test - no issue available");
             return;
         }
-        
         String comment = "Test comment added by automation at " + 
                         java.time.LocalDateTime.now();
         
+        // Act
         boolean result = jiraClient.addComment(testIssueKey, comment);
         
+        // Assert
         assertTrue(result, "Comment should be added successfully");
     }
     
@@ -101,13 +109,16 @@ public class JiraApiTests {
     @Story("Get Issue")
     @Description("Verify ability to retrieve issue details from Jira")
     public void testGetIssueDetails() {
+        // Arrange
         if (!config.isConfigured() || testIssueKey == null) {
             System.out.println("Skipping get issue test - no issue available");
             return;
         }
         
+        // Act
         Map<String, Object> issueDetails = jiraClient.getIssue(testIssueKey);
         
+        // Assert
         assertNotNull(issueDetails, "Issue details should be retrieved");
         assertEquals(issueDetails.get("key"), testIssueKey, 
                     "Issue key should match");
@@ -118,19 +129,19 @@ public class JiraApiTests {
     @Story("Search Issues")
     @Description("Verify JQL search functionality")
     public void testSearchIssues() {
+        // Arrange
         if (!config.isConfigured()) {
             System.out.println("Jira not configured - skipping search test");
             return;
         }
-        
         String jql = "project = " + config.getProjectKey() + " ORDER BY created DESC";
         
+        // Act
         Response response = jiraClient.searchIssues(jql);
         
+        // Assert
         assertNotNull(response, "Search response should not be null");
         assertEquals(response.getStatusCode(), 200, "Search should return 200 OK");
-        
-        // New /search/jql API returns issues array instead of total
         int issueCount = response.jsonPath().getList("issues").size();
         System.out.println("Found " + issueCount + " issues in project " + config.getProjectKey());
         assertTrue(issueCount >= 0, "Should return valid issue count");
@@ -141,11 +152,11 @@ public class JiraApiTests {
     @Story("Create Defect")
     @Description("Verify ability to create defect/bug for failed test")
     public void testCreateDefectForFailedTest() {
+        // Arrange
         if (!config.isConfigured()) {
             System.out.println("Jira not configured - skipping defect creation test");
             return;
         }
-        
         String testName = "com.geofence.tests.SampleTest.testGeofenceExit";
         String errorMessage = "Expected notification 'kid out of geofence' but got null";
         String stackTrace = """
@@ -154,12 +165,13 @@ public class JiraApiTests {
                     at com.geofence.tests.SampleTest.testGeofenceExit(SampleTest.java:45)
                 """;
         
+        // Act
         String defectKey = jiraClient.createDefect(testName, errorMessage, stackTrace);
         
+        // Assert
         assertNotNull(defectKey, "Defect should be created successfully");
         assertTrue(defectKey.startsWith(config.getProjectKey()), 
                    "Defect key should start with project key");
-        
         System.out.println("Created defect: " + defectKey);
     }
 }
