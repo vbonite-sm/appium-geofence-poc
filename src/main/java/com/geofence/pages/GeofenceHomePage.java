@@ -1,13 +1,11 @@
 package com.geofence.pages;
 
+import io.appium.java_client.android.AndroidDriver;
 import io.appium.java_client.pagefactory.AndroidFindBy;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-
-import java.time.Duration;
 
 /**
- * Page Object for the Geofencing app main screen
+ * Page Object for the Geofencing app main screen.
  */
 public class GeofenceHomePage extends BasePage {
 
@@ -23,49 +21,40 @@ public class GeofenceHomePage extends BasePage {
     @AndroidFindBy(id = "com.eebax.geofencing:id/action_bar")
     private WebElement actionBar;
 
-    // ==================== VERIFICATIONS ====================
-
     @Override
     public boolean isPageLoaded() {
         try {
-            // Wait for app to fully load
-            Thread.sleep(3000);
+            pause(2000);
 
-            // Try multiple ways to verify app is loaded
-            if (isDisplayed(appTitle)) {
-                System.out.println("Found: App title 'Geofencing'");
-                return true;
-            }
-            if (isDisplayed(helloWorldText)) {
-                System.out.println("Found: 'Hello World!' text");
-                return true;
-            }
-            if (isDisplayed(helloTextPartial)) {
-                System.out.println("Found: Text containing 'Hello'");
+            if (isDisplayed(appTitle, 5)) {
+                log.debug("Found app title element");
                 return true;
             }
 
-            // Last resort - check if any activity is running
-            String activity = driver.currentActivity();
-            System.out.println("Current activity: " + activity);
-            if (activity != null && activity.contains("MainActivity")) {
-                System.out.println("Found: MainActivity is running");
+            if (isDisplayed(helloWorldText, 3)) {
+                log.debug("Found 'Hello World!' text");
                 return true;
             }
 
-            // Debug: Print page source
-            System.out.println("Page source preview:");
-            String pageSource = driver.getPageSource();
-            if (pageSource != null && pageSource.length() > 500) {
-                System.out.println(pageSource.substring(0, 500) + "...");
-            } else {
-                System.out.println(pageSource);
+            if (isDisplayed(helloTextPartial, 3)) {
+                log.debug("Found text containing 'Hello'");
+                return true;
             }
 
-            return activity != null && !activity.isEmpty();
+            if (driver instanceof AndroidDriver) {
+                AndroidDriver androidDriver = (AndroidDriver) driver;
+                String activity = androidDriver.currentActivity();
+                if (activity != null && activity.contains("MainActivity")) {
+                    log.debug("MainActivity is running");
+                    return true;
+                }
+                return activity != null && !activity.isEmpty();
+            }
+
+            return false;
 
         } catch (Exception e) {
-            System.err.println("Error checking page loaded: " + e.getMessage());
+            log.warn("Error checking if page is loaded: {}", e.getMessage());
             return false;
         }
     }
@@ -91,6 +80,14 @@ public class GeofenceHomePage extends BasePage {
             return getText(helloWorldText);
         } catch (Exception e) {
             return "Hello World!";
+        }
+    }
+
+    private void pause(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 }

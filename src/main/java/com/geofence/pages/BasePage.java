@@ -1,64 +1,73 @@
 package com.geofence.pages;
 
-import com.geofence.utils.DriverManager;
-import io.appium.java_client.android.AndroidDriver;
+import com.geofence.driver.DriverManager;
+import io.appium.java_client.AppiumDriver;
 import io.appium.java_client.pagefactory.AppiumFieldDecorator;
 import org.openqa.selenium.support.PageFactory;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 
 public abstract class BasePage {
 
-    protected AndroidDriver driver;
+    protected static final Logger log = LoggerFactory.getLogger(BasePage.class);
+    protected static final int DEFAULT_TIMEOUT = 10;
+
+    protected AppiumDriver driver;
     protected WebDriverWait wait;
 
-    private static final int DEFAULT_TIMEOUT = 10;
-
-    // Constructor for driver and page factory  initialization
     public BasePage() {
         this.driver = DriverManager.getDriver();
         this.wait = new WebDriverWait(driver, Duration.ofSeconds(DEFAULT_TIMEOUT));
         PageFactory.initElements(new AppiumFieldDecorator(driver, Duration.ofSeconds(DEFAULT_TIMEOUT)), this);
     }
 
-    // COMMON FUNCTIONS FOR ALL PAGES
-
-    // Click on element
-    protected void click(WebElement e) {
-        wait.until(ExpectedConditions.elementToBeClickable(e));
-        e.click();
+    protected void click(WebElement element) {
+        wait.until(ExpectedConditions.elementToBeClickable(element));
+        element.click();
     }
 
-    // Input text into element
-    protected void type(WebElement e, String text) {
-        wait.until(ExpectedConditions.visibilityOf(e));
-        e.clear();
-        e.sendKeys(text);
+    protected void type(WebElement element, String text) {
+        wait.until(ExpectedConditions.visibilityOf(element));
+        element.clear();
+        element.sendKeys(text);
     }
 
-    // Get text from element
-    protected String getText(WebElement e) {
-        wait.until(ExpectedConditions.visibilityOf(e));
-        return e.getText();
+    protected String getText(WebElement element) {
+        wait.until(ExpectedConditions.visibilityOf(element));
+        return element.getText();
     }
 
-    // Check if element is displayed
-    protected boolean isDisplayed(WebElement e) {
+    protected boolean isDisplayed(WebElement element) {
         try {
-            wait.until(ExpectedConditions.visibilityOf(e));
-            return e.isDisplayed();
-        } catch (Exception ex) {
+            wait.until(ExpectedConditions.visibilityOf(element));
+            return element.isDisplayed();
+        } catch (Exception e) {
             return false;
         }
     }
 
-    // Wait for element to be visible
+    protected boolean isDisplayed(WebElement element, int timeoutSeconds) {
+        try {
+            WebDriverWait customWait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
+            customWait.until(ExpectedConditions.visibilityOf(element));
+            return element.isDisplayed();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     protected WebElement waitForVisibility(By locator) {
         return wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+    }
+
+    protected WebElement waitForClickable(By locator) {
+        return wait.until(ExpectedConditions.elementToBeClickable(locator));
     }
 
     protected void navigateBack() {
