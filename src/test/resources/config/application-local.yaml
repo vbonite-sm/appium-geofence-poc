@@ -1,0 +1,15 @@
+# Local development configuration
+
+appium:
+  server:
+    url: "http://127.0.0.1:4723"
+
+local:
+  device:
+    name: "emulator-5554"
+  app:
+    path: "\\src\\test\\resources\\apps\\geofence-app.apk"
+
+timeout:
+  default: 15
+  implicit: 10

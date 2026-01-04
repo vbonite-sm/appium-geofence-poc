@@ -1,0 +1,37 @@
+[
+  {
+    "name": "Geofence Center (SF)",
+    "latitude": 37.7749,
+    "longitude": -122.4194,
+    "expectedInside": true,
+    "description": "Center point of the geofence"
+  },
+  {
+    "name": "Inside 50m",
+    "latitude": 37.7753,
+    "longitude": -122.4194,
+    "expectedInside": true,
+    "description": "50 meters from center - well inside 100m radius"
+  },
+  {
+    "name": "On Boundary 100m",
+    "latitude": 37.7758,
+    "longitude": -122.4194,
+    "expectedInside": true,
+    "description": "Exactly on the boundary of 100m radius"
+  },
+  {
+    "name": "Outside 150m",
+    "latitude": 37.7763,
+    "longitude": -122.4194,
+    "expectedInside": false,
+    "description": "150 meters from center - triggers exit alert"
+  },
+  {
+    "name": "Outside 200m",
+    "latitude": 37.7767,
+    "longitude": -122.4194,
+    "expectedInside": false,
+    "description": "200 meters from center - far outside geofence"
+  }
+]

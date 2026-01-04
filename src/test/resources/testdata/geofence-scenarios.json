@@ -1,0 +1,96 @@
+{
+  "scenarios": [
+    {
+      "id": "TC-001",
+      "name": "Geofence Entry Detection",
+      "description": "Verify app detects when device enters geofence area",
+      "startLocation": {
+        "name": "Outside 150m",
+        "latitude": 37.7763,
+        "longitude": -122.4194
+      },
+      "endLocation": {
+        "name": "Geofence Center",
+        "latitude": 37.7749,
+        "longitude": -122.4194
+      },
+      "geofenceCenter": {
+        "latitude": 37.7749,
+        "longitude": -122.4194
+      },
+      "radiusMeters": 100,
+      "expectedTransition": "ENTRY",
+      "priority": 1,
+      "severity": "CRITICAL"
+    },
+    {
+      "id": "TC-002",
+      "name": "Geofence Exit 150m",
+      "description": "Verify app detects device exiting geofence to 150m distance",
+      "startLocation": {
+        "name": "Geofence Center",
+        "latitude": 37.7749,
+        "longitude": -122.4194
+      },
+      "endLocation": {
+        "name": "Outside 150m",
+        "latitude": 37.7763,
+        "longitude": -122.4194
+      },
+      "geofenceCenter": {
+        "latitude": 37.7749,
+        "longitude": -122.4194
+      },
+      "radiusMeters": 100,
+      "expectedTransition": "EXIT",
+      "priority": 1,
+      "severity": "CRITICAL"
+    },
+    {
+      "id": "TC-003",
+      "name": "Movement Within Geofence",
+      "description": "Verify no alert when moving within geofence boundaries",
+      "startLocation": {
+        "name": "Geofence Center",
+        "latitude": 37.7749,
+        "longitude": -122.4194
+      },
+      "endLocation": {
+        "name": "Inside 50m",
+        "latitude": 37.7753,
+        "longitude": -122.4194
+      },
+      "geofenceCenter": {
+        "latitude": 37.7749,
+        "longitude": -122.4194
+      },
+      "radiusMeters": 100,
+      "expectedTransition": "NONE",
+      "priority": 2,
+      "severity": "NORMAL"
+    },
+    {
+      "id": "TC-004",
+      "name": "Boundary Detection",
+      "description": "Verify behavior at exact geofence boundary",
+      "startLocation": {
+        "name": "Inside 50m",
+        "latitude": 37.7753,
+        "longitude": -122.4194
+      },
+      "endLocation": {
+        "name": "On Boundary 100m",
+        "latitude": 37.7758,
+        "longitude": -122.4194
+      },
+      "geofenceCenter": {
+        "latitude": 37.7749,
+        "longitude": -122.4194
+      },
+      "radiusMeters": 100,
+      "expectedTransition": "NONE",
+      "priority": 3,
+      "severity": "NORMAL"
+    }
+  ]
+}

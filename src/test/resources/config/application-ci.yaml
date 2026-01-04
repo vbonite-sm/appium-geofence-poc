@@ -1,0 +1,10 @@
+# CI/CD pipeline configuration
+
+browserstack:
+  project: "GeoFence POC - CI"
+  build: "${BUILD_NUMBER:Build-CI}"
+  name: "Automated Geofence Tests"
+
+timeout:
+  default: 45
+  implicit: 20

@@ -1,0 +1,22 @@
+# BrowserStack cloud configuration
+# Credentials should be set via environment variables:
+# - BROWSERSTACK_USERNAME
+# - BROWSERSTACK_ACCESSKEY
+
+browserstack:
+  project: "GeoFence POC"
+  build: "Build 1.0"
+  name: "Geofence Tests"
+  device: "Google Pixel 7"
+  os_version: "13.0"
+  # app: Set via BROWSERSTACK_APP environment variable
+  ios:
+    device: "iPhone 14"
+    version: "16"
+    # app: Set via BROWSERSTACK_IOS_APP environment variable
+  build.ios: "iOS Build 1.0"
+  name.ios: "iOS Geofence Tests"
+
+timeout:
+  default: 30
+  implicit: 15

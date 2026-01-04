@@ -1,0 +1,37 @@
+# Base application configuration
+# Environment-specific configs override these values
+
+browserstack:
+  project: "GeoFence POC"
+  build: "Build 1.0"
+  name: "Geofence Tests"
+  device: "Google Pixel 7"
+  os_version: "13.0"
+  ios:
+    device: "iPhone 14"
+    version: "16"
+  build.ios: "iOS Build 1.0"
+  name.ios: "iOS Geofence Tests"
+
+appium:
+  server:
+    url: "http://127.0.0.1:4723"
+
+local:
+  device:
+    name: "emulator-5554"
+  app:
+    path: "\\src\\test\\resources\\apps\\geofence-app.apk"
+
+api:
+  base:
+    uri: "https://jsonplaceholder.typicode.com"
+
+timeout:
+  default: 10
+  implicit: 10
+  explicit: 15
+
+geofence:
+  default:
+    radius: 100.0

@@ -1,0 +1,38 @@
+{
+  "createGeofence": {
+    "title": "Home GeoFence",
+    "body": "GeoFence for tracking location",
+    "userId": 1,
+    "latitude": 37.7749,
+    "longitude": -122.4194,
+    "radius": 100,
+    "alertMessage": "Out of the GeoFence area."
+  },
+  "updateGeofence": {
+    "title": "Updated Home GeoFence",
+    "body": "Updated GeoFence description",
+    "userId": 1,
+    "latitude": 37.7749,
+    "longitude": -122.4194,
+    "radius": 150,
+    "alertMessage": "Updated: Out of the GeoFence area."
+  },
+  "workGeofence": {
+    "title": "Work GeoFence",
+    "body": "GeoFence for work location",
+    "userId": 1,
+    "latitude": 37.7849,
+    "longitude": -122.4094,
+    "radius": 200,
+    "alertMessage": "Left work area."
+  },
+  "schoolGeofence": {
+    "title": "School GeoFence",
+    "body": "GeoFence for school tracking",
+    "userId": 2,
+    "latitude": 37.7649,
+    "longitude": -122.4294,
+    "radius": 50,
+    "alertMessage": "Child left school area."
+  }
+}
