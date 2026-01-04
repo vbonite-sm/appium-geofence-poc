@@ -96,7 +96,7 @@ public class GeofenceDataProvider {
                 .build();
 
         public static final GeoLocation ON_BOUNDARY_100M = GeoLocation.builder()
-                .latitude(37.7758)
+                .latitude(37.77579)
                 .longitude(-122.4194)
                 .name("On Boundary 100m")
                 .build();

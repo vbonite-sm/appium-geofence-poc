@@ -193,7 +193,14 @@ Example TestNG XML:
 ## API Tests
 
 ```bash
+# Run all API tests
 mvn clean test -Dtest=GeofenceApiTest
+
+# Run specific API test method
+mvn clean test -Dtest=GeofenceApiTest#testCreateGeoFence
+
+# Run API tests with verbose logging
+mvn clean test -Dtest=GeofenceApiTest -Dorg.slf4j.simpleLogger.defaultLogLevel=debug
 ```
 
 API tests use REST Assured and validate geofence API endpoints.

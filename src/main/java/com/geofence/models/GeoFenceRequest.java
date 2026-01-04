@@ -21,8 +21,14 @@ public class GeoFenceRequest {
     @JsonProperty("name")
     private String name;
 
+    @JsonProperty("title")
+    private String title;
+
+    @JsonProperty("body")
+    private String body;
+
     @JsonProperty("userId")
-    private String userId;
+    private int userId;
 
     public GeoFenceRequest() {
     }
@@ -32,6 +38,8 @@ public class GeoFenceRequest {
         this.longitude = builder.longitude;
         this.radius = builder.radius;
         this.name = builder.name;
+        this.title = builder.title;
+        this.body = builder.body;
         this.userId = builder.userId;
     }
 
@@ -67,12 +75,39 @@ public class GeoFenceRequest {
         this.name = name;
     }
 
-    public String getUserId() {
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getBody() {
+        return body;
+    }
+
+    public void setBody(String body) {
+        this.body = body;
+    }
+
+    public int getUserId() {
         return userId;
     }
 
-    public void setUserId(String userId) {
+    public void setUserId(int userId) {
         this.userId = userId;
+    }
+
+    public static GeoFenceRequest createDefault() {
+        return builder()
+                .title("Home GeoFence")
+                .body("Default geofence for home location")
+                .userId(1)
+                .latitude(14.5995)
+                .longitude(120.9842)
+                .radius(100.0)
+                .build();
     }
 
     public static Builder builder() {
@@ -84,7 +119,9 @@ public class GeoFenceRequest {
         private double longitude;
         private double radius;
         private String name;
-        private String userId;
+        private String title;
+        private String body;
+        private int userId;
 
         public Builder latitude(double latitude) {
             this.latitude = latitude;
@@ -106,7 +143,17 @@ public class GeoFenceRequest {
             return this;
         }
 
-        public Builder userId(String userId) {
+        public Builder title(String title) {
+            this.title = title;
+            return this;
+        }
+
+        public Builder body(String body) {
+            this.body = body;
+            return this;
+        }
+
+        public Builder userId(int userId) {
             this.userId = userId;
             return this;
         }

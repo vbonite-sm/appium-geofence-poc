@@ -34,10 +34,11 @@ public class LocationService {
     public void setLocation(GeoLocation location) {
         log.debug("Setting device location to: {}", location);
 
+        double altitude = location.getAltitude() != null ? location.getAltitude() : 0.0;
         Location seleniumLocation = new Location(
                 location.getLatitude(),
                 location.getLongitude(),
-                location.getAltitude()
+                altitude
         );
 
         if (driver instanceof AndroidDriver androidDriver) {
