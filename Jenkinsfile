@@ -168,7 +168,7 @@ pipeline {
                 script {
                     bat """
                         mvn exec:java -Dexec.mainClass="com.geofence.integrations.confluence.ConfluenceReportPublisher" ^
-                        -Dexec.args="--build-number=${BUILD_NUMBER} --build-url=${BUILD_URL} --allure-url=${BUILD_URL}allure"
+                        -Dexec.args="--build-number=${BUILD_NUMBER} --build-url=${BUILD_URL} --allure-url=${BUILD_URL}allure --results-dir=target/surefire-reports"
                     """
                 }
             }

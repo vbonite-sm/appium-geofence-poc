@@ -102,13 +102,29 @@ public class ConfluenceReportPublisher {
             return summary;
         }
 
-        File[] xmlFiles = dir.listFiles((d, name) -> name.endsWith(".xml") && !name.startsWith("TEST-"));
+        // First try to parse testng-results.xml (TestNG native format)
+        File testngResults = new File(dir, "testng-results.xml");
+        if (testngResults.exists()) {
+            try {
+                parseTestNGResults(testngResults, summary);
+                logger.info("Parsed TestNG results: {} total, {} passed, {} failed, {} skipped",
+                    summary.totalTests, summary.passed, summary.failures, summary.skipped);
+                return summary;
+            } catch (Exception e) {
+                logger.warn("Failed to parse testng-results.xml: {}", e.getMessage());
+            }
+        }
+
+        // Fallback to JUnit/Surefire XML format (TEST-*.xml files)
+        File[] xmlFiles = dir.listFiles((d, name) -> name.startsWith("TEST-") && name.endsWith(".xml"));
+        
         if (xmlFiles == null || xmlFiles.length == 0) {
-            // Try TEST-*.xml pattern
-            xmlFiles = dir.listFiles((d, name) -> name.startsWith("TEST-") && name.endsWith(".xml"));
+            // Try any XML files that might be surefire reports
+            xmlFiles = dir.listFiles((d, name) -> name.endsWith(".xml") && !name.equals("testng-results.xml") && !name.equals("testng-failed.xml"));
         }
         
-        if (xmlFiles == null) {
+        if (xmlFiles == null || xmlFiles.length == 0) {
+            logger.warn("No test result XML files found in: {}", resultsDir);
             return summary;
         }
 
@@ -121,6 +137,68 @@ public class ConfluenceReportPublisher {
         }
 
         return summary;
+    }
+
+    /**
+     * Parses TestNG native XML format (testng-results.xml)
+     */
+    private void parseTestNGResults(File xmlFile, TestSummary summary) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document doc = builder.parse(new FileInputStream(xmlFile));
+        
+        // Parse root <testng-results> element which has the totals
+        NodeList resultsList = doc.getElementsByTagName("testng-results");
+        if (resultsList.getLength() > 0) {
+            Element results = (Element) resultsList.item(0);
+            
+            summary.totalTests = parseIntAttribute(results, "total", 0);
+            summary.passed = parseIntAttribute(results, "passed", 0);
+            summary.failures = parseIntAttribute(results, "failed", 0);
+            summary.skipped = parseIntAttribute(results, "skipped", 0);
+            summary.errors = 0; // TestNG doesn't distinguish errors from failures
+        }
+        
+        // Parse suite information for breakdown
+        NodeList suites = doc.getElementsByTagName("suite");
+        for (int i = 0; i < suites.getLength(); i++) {
+            Element suite = (Element) suites.item(i);
+            String suiteName = suite.getAttribute("name");
+            String durationStr = suite.getAttribute("duration-ms");
+            double duration = 0.0;
+            try {
+                duration = durationStr != null && !durationStr.isEmpty() 
+                    ? Double.parseDouble(durationStr) / 1000.0 : 0.0;
+            } catch (NumberFormatException e) {
+                // ignore
+            }
+            
+            // Count tests in this suite
+            int suiteTests = 0, suiteFailed = 0, suiteSkipped = 0;
+            NodeList testMethods = suite.getElementsByTagName("test-method");
+            for (int j = 0; j < testMethods.getLength(); j++) {
+                Element method = (Element) testMethods.item(j);
+                // Skip config methods
+                String isConfig = method.getAttribute("is-config");
+                if ("true".equals(isConfig)) {
+                    continue;
+                }
+                
+                suiteTests++;
+                String status = method.getAttribute("status");
+                if ("FAIL".equals(status)) {
+                    suiteFailed++;
+                } else if ("SKIP".equals(status)) {
+                    suiteSkipped++;
+                }
+            }
+            
+            if (suiteName != null && !suiteName.isEmpty() && suiteTests > 0) {
+                summary.suites.add(new SuiteResult(suiteName, suiteTests, suiteFailed, suiteSkipped, duration));
+            }
+            
+            summary.totalTime += duration;
+        }
     }
 
     private void parseTestSuite(File xmlFile, TestSummary summary) throws Exception {
