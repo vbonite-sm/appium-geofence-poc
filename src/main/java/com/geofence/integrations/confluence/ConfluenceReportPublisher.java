@@ -1,5 +1,7 @@
 package com.geofence.integrations.confluence;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -23,6 +25,7 @@ import java.util.Properties;
 public class ConfluenceReportPublisher {
 
     private static final Logger logger = LoggerFactory.getLogger(ConfluenceReportPublisher.class);
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final ConfluenceClient confluenceClient;
     private String buildNumber;
@@ -102,7 +105,22 @@ public class ConfluenceReportPublisher {
             return summary;
         }
 
-        // First try to parse testng-results.xml (TestNG native format)
+        // First try to parse Allure JSON results (most accurate for multi-stage builds)
+        File allureDir = new File(dir.getParentFile(), "allure-results");
+        if (allureDir.exists() && allureDir.isDirectory()) {
+            try {
+                parseAllureResults(allureDir, summary);
+                if (summary.totalTests > 0) {
+                    logger.info("Parsed Allure results: {} total, {} passed, {} failed, {} skipped",
+                        summary.totalTests, summary.passed, summary.failures, summary.skipped);
+                    return summary;
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to parse Allure results: {}", e.getMessage());
+            }
+        }
+
+        // Fallback to testng-results.xml (TestNG native format)
         File testngResults = new File(dir, "testng-results.xml");
         if (testngResults.exists()) {
             try {
@@ -137,6 +155,76 @@ public class ConfluenceReportPublisher {
         }
 
         return summary;
+    }
+
+    /**
+     * Parses Allure JSON result files to get accurate test counts
+     */
+    private void parseAllureResults(File allureDir, TestSummary summary) throws Exception {
+        File[] resultFiles = allureDir.listFiles((d, name) -> name.endsWith("-result.json"));
+        
+        if (resultFiles == null || resultFiles.length == 0) {
+            logger.warn("No Allure result files found in: {}", allureDir.getPath());
+            return;
+        }
+        
+        java.util.Map<String, SuiteResult> suiteMap = new java.util.HashMap<>();
+        
+        for (File resultFile : resultFiles) {
+            try {
+                JsonNode result = objectMapper.readTree(resultFile);
+                String status = result.has("status") ? result.get("status").asText() : "unknown";
+                long duration = 0;
+                if (result.has("stop") && result.has("start")) {
+                    duration = result.get("stop").asLong() - result.get("start").asLong();
+                }
+                
+                summary.totalTests++;
+                summary.totalTime += duration / 1000.0; // Convert ms to seconds
+                
+                switch (status.toLowerCase()) {
+                    case "passed":
+                        summary.passed++;
+                        break;
+                    case "failed":
+                        summary.failures++;
+                        break;
+                    case "broken":
+                        summary.errors++;
+                        break;
+                    case "skipped":
+                        summary.skipped++;
+                        break;
+                }
+                
+                // Extract suite name from labels
+                String suiteName = "Default Suite";
+                if (result.has("labels")) {
+                    for (JsonNode label : result.get("labels")) {
+                        if ("suite".equals(label.get("name").asText())) {
+                            suiteName = label.get("value").asText();
+                            break;
+                        }
+                    }
+                }
+                
+                // Aggregate by suite
+                SuiteResult suiteResult = suiteMap.computeIfAbsent(suiteName, 
+                    name -> new SuiteResult(name, 0, 0, 0, 0.0));
+                suiteResult.tests++;
+                suiteResult.time += duration / 1000.0;
+                if ("failed".equalsIgnoreCase(status) || "broken".equalsIgnoreCase(status)) {
+                    suiteResult.failed++;
+                } else if ("skipped".equalsIgnoreCase(status)) {
+                    suiteResult.skipped++;
+                }
+                
+            } catch (Exception e) {
+                logger.debug("Error parsing Allure result file {}: {}", resultFile.getName(), e.getMessage());
+            }
+        }
+        
+        summary.suites.addAll(suiteMap.values());
     }
 
     /**
